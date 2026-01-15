@@ -288,6 +288,7 @@ Think...simple bucket model
 
 # Assignment 2 - Due Jan 13th 8am
 
+<<<<<<< HEAD
 [Assignment 2](../assignments/Assignment2_ConceptualModel.html)
 
 # Develop a Conceptual Model
@@ -300,3 +301,6 @@ Think...simple bucket model
     -   relationships/processes
     -   assumptions
 
+=======
+[Assignment 2](%22../assignments/Assignment2_ConceptualModel.html%22)
+>>>>>>> 13f7758 (lecture2 edit)
