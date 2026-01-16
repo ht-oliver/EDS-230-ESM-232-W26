@@ -1,0 +1,19 @@
+---
+title: "assignment_3_submission"
+author: "Henry Oliver"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+library(purrr)
+```
+
+
+```{r}
+
+
+```
+

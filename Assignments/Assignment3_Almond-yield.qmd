@@ -33,6 +33,10 @@ Your goal is to implement a simple model of almond yield anomaly response to cli
 
 * Outputs: maximum, minimum and mean yield anomoly for a input time series
 
+```{r}
+read_csv 
+```
+
 
 The Lobell et al. 2006 paper will be the source for the transfer function that you will use in your model; specifically look at the equations in table 2.
 
