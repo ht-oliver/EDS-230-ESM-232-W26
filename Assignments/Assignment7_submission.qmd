@@ -1,0 +1,102 @@
+---
+title: "Assignment7_submission"
+format: html
+author: Henry Oliver
+date: March 10, 2026
+warning: false
+---
+
+```{r}
+library(sensitivity)
+library(tidyverse)
+library(deSolve)
+library(lhs)
+library(purrr)
+library(here)
+library(ggpubr)
+
+```
+## Adding hunting to the predator prey model
+
+For this example, I've just added a simple hunting parameter to the existing lotvmodK. Only prey are being hunted in my model.
+
+## Running model
+```{r}
+source(here("R/lotvmodK_hunt.R"))
+
+# Test to see stability
+pars <- c(rprey=0.95, alpha=0.01, eff=0.6, pmort=0.4, K=2000, hunt_rate=0.1, min_prey=50)
+currpop <- c(prey=100, pred=10)
+days <- seq(1, 500)
+
+res <- ode(func=lotvmodK_hunt, y=currpop, times=days, parms=pars)
+resl <- as.data.frame(res) %>% pivot_longer(-time, names_to="species", values_to="pop")
+ggplot(resl, aes(time, pop, col=species)) + geom_line()
+```
+## Stability Testing
+
+My stability will be defined as the prey population being above 50, and the predator population being above 10. I figure this is appropriate because it leaves enough predators that even if there's a catastrophic, unexpected event that wipes out 50% of predator population, there will still be 5 wolves which has favorable odds that there will be two breeding pairs. Prey are set at 50 because there need to be enough prey to sustain themselves, and to sustain the predator population.
+
+My metric for stability will be the proportion of simulated runs that return a stable community after 50 years. This way I can see how likely, based on our model, populations are to remain stable at a given hunting rate.
+
+```{r}
+#| warning: false
+
+hunt_rates <- seq(0, 0.5, by = 0.05) # Test 10 different hunting rates from 0 to 50%
+n_sims <- 100 
+noise_sd <- 0.10 # 10% variation will be used on each parameter
+prey_threshold <- 50 # Stability threshold for prey
+pred_threshold <- 10 # Stability threshold for pred
+base_pars <- c(rprey=0.95, alpha=0.01, eff=0.6, pmort=0.4, K=2000)
+days <- seq(1, 365 * 50, by = 10) # Sample every 10 days for 50 years
+
+results <- map_dfr(hunt_rates, function(h) {
+  
+  stable <- replicate(n_sims, {
+    # Create parameters with uncertainty
+    noisy_pars <- rnorm(length(base_pars),
+                        mean = base_pars,
+                        sd = abs(base_pars * noise_sd))
+    noisy_pars <- pmax(noisy_pars, 0)
+    
+    names(noisy_pars) <- names(base_pars)
+    
+    pars <- c(noisy_pars, hunt_rate = h, min_prey = 50)
+    
+# Output   
+out <- ode(func = lotvmodK_hunt, y = c(prey=1, pred=1), times = days, parms = pars)
+
+final_prey <- tail(out[, "prey"], 1)
+final_pred <- tail(out[, "pred"], 1)
+
+final_prey > prey_threshold & final_pred > pred_threshold
+  })
+  
+  data.frame(hunt_rate = h, prop_stable = mean(stable))
+})
+
+
+```
+
+With this model I test stability by running the model with all of my parameters having a 10% error range. I chose this because it was simple numerically, but allows for flexibility of all my parameters. 
+
+## Plot of hunting rate vs stability metric
+
+```{r}
+
+# Plot
+ggplot(results, aes(hunt_rate, prop_stable)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0.80, lty = 2, col = "red") + # If 80% of returns are stable, I'll consider it to be a safe hunting rate
+  labs(x = "Hunting Rate",
+       y = "Proportion of Stable Runs",
+       title = "Predator & Prey Stability Under Hunting Pressure",
+       caption = "Dashed line = 80% stability threshold.\nStability defined as prey > 50 and pred > 10 at year 50.") +
+  theme_minimal()
+
+```
+
+Based on these results, I would suggest a maximum hunting rate of 3%. Based on my input parameters, This means that there should be 3 hunting tags for prey given out each year. This number comes from my stability threshold that I set at 80% of results meeting our "stable" population threshold. If our model shows that the hunting rate will return a stable population in 50 years 80% of the time, I think it is safe to hunt at that rate. If populations drop faster than expected, we'll have many years to make changes and develop a new model.
+
+
